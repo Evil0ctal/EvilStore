@@ -1,11 +1,12 @@
 name: build
 
+# only run on PRs targeting main and on release tags. plain pushes to
+# feature branches don't burn ci minutes.
 on:
-  push:
-    branches: [main]
-    tags: ['v*']
   pull_request:
     branches: [main]
+  push:
+    tags: ['v*']
 
 jobs:
   tipa:

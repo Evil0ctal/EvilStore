@@ -1,6 +1,9 @@
 name: lint
 
-on: [push, pull_request]
+# only on PRs to main; saves runner minutes on feature-branch churn.
+on:
+  pull_request:
+    branches: [main]
 
 jobs:
   format:
