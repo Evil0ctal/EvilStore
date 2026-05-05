@@ -18,32 +18,27 @@ Falls back to manual Apple ID login if the system session can't be borrowed.
 ## Requirements
 
 - iPhone or iPad with TrollStore installed (iOS 14.0 - 16.6.1, 16.7 RC, or 17.0).
-- macOS with Xcode 15+ and `ldid`/`coreutils`/`xcbeautify` for building.
+- macOS with Xcode 17 + `ldid` for local builds (CI builds work without local setup).
 - A **secondary** Apple ID. Do not use your main account.
 
 ## Build
 
-CI is the authoritative builder; local builds are optional.
+CI is the authoritative builder. Local build needs:
 
 ```sh
 brew install xcodegen ldid coreutils jq xcbeautify
 Scripts/build_tipa.sh                  # -> build/EvilStore.tipa
 ```
 
-The `.xcodeproj` is not committed; it is regenerated from
-[`project.yml`](./project.yml) by [XcodeGen](https://github.com/yonaskolb/XcodeGen)
-on every build. See [docs/M0_GETTING_STARTED.md](./docs/M0_GETTING_STARTED.md).
+The `.xcodeproj` is regenerated from [`project.yml`](./project.yml) by
+[XcodeGen](https://github.com/yonaskolb/XcodeGen) on every build, so no Xcode
+project files live in git.
 
 ## Install
 
 AirDrop `build/EvilStore.tipa` to the device, then open it in TrollStore.
-
-## Docs
-
-- [1. Architecture](./docs/1_project_overview_and_architecture.md)
-- [2. Build & directory layout](./docs/2_directory_skeleton_and_build.md)
-- [3. UI design](./docs/3_ui_design_and_wireframes.md)
-- [M0 getting started](./docs/M0_GETTING_STARTED.md)
+Or grab the latest CI artifact from the
+[Actions](https://github.com/Evil0ctal/EvilStore/actions) tab.
 
 ## Acknowledgements
 
