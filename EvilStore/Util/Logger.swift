@@ -44,7 +44,7 @@ enum Log {
         ) else {
             return s
         }
-        let range = NSRange(s.startIndex..<s.endIndex, in: s)
+        let range = NSRange(s.startIndex ..< s.endIndex, in: s)
         return regex.stringByReplacingMatches(
             in: s, options: [], range: range, withTemplate: "$1=<redacted>"
         )

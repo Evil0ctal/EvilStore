@@ -10,7 +10,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 if command -v swiftformat >/dev/null; then
-    swiftformat --lint EvilStore EvilStoreTests
+    swiftformat EvilStore EvilStoreTests --lint
 else
     echo "skip: swiftformat not found (brew install swiftformat)"
 fi

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0
 // Copyright (C) 2026 Evil0ctal <evil0ctal1985@gmail.com>
 
-import XCTest
 @testable import EvilStore
+import XCTest
 
 final class BinaryCookiesParserTests: XCTestCase {
     func test_parse_sample_returns_two_cookies() throws {

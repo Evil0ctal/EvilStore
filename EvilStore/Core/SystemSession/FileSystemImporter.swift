@@ -57,7 +57,7 @@ final class FileSystemImporter: SystemSessionImporter {
     private func readAccountInfo() throws -> AccountInfoFile {
         let candidates = [
             storeRoot.appendingPathComponent("accountInfo"),
-            storeRoot.appendingPathComponent("accountInfo.plist"),
+            storeRoot.appendingPathComponent("accountInfo.plist")
         ]
         var lastError: Error?
         for url in candidates {
@@ -122,8 +122,10 @@ final class FileSystemImporter: SystemSessionImporter {
         let data = try Data(contentsOf: url)
         // tokens file is sometimes a plist dict, sometimes raw encrypted blob.
         // best-effort plist read first.
-        if let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
-           let token = firstString(plist, keys: ["passwordToken", "PasswordToken", "Token"]) {
+        if let plist = try? PropertyListSerialization
+            .propertyList(from: data, options: [], format: nil) as? [String: Any],
+            let token = firstString(plist, keys: ["passwordToken", "PasswordToken", "Token"])
+        {
             return token
         }
         throw SystemSessionError.tokenDecryptionFailed

@@ -16,13 +16,13 @@ struct HTTPCookieBox: Equatable, Codable {
 
 extension HTTPCookieBox {
     init(_ cookie: HTTPCookie) {
-        self.name = cookie.name
-        self.value = cookie.value
-        self.domain = cookie.domain
-        self.path = cookie.path
-        self.expiresDate = cookie.expiresDate
-        self.isSecure = cookie.isSecure
-        self.isHTTPOnly = cookie.isHTTPOnly
+        name = cookie.name
+        value = cookie.value
+        domain = cookie.domain
+        path = cookie.path
+        expiresDate = cookie.expiresDate
+        isSecure = cookie.isSecure
+        isHTTPOnly = cookie.isHTTPOnly
     }
 
     func toHTTPCookie() -> HTTPCookie? {
@@ -30,7 +30,7 @@ extension HTTPCookieBox {
             .name: name,
             .value: value,
             .domain: domain,
-            .path: path,
+            .path: path
         ]
         if let expiresDate { props[.expires] = expiresDate }
         if isSecure { props[.secure] = "TRUE" }

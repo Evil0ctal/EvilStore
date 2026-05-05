@@ -54,7 +54,7 @@ enum BinaryCookiesParser {
         var cursor = 8
         var pageSizes: [Int] = []
         pageSizes.reserveCapacity(Int(numPages))
-        for _ in 0..<numPages {
+        for _ in 0 ..< numPages {
             let size = try data.readUInt32BE(at: cursor)
             pageSizes.append(Int(size))
             cursor += 4
@@ -65,8 +65,8 @@ enum BinaryCookiesParser {
             guard cursor + size <= data.count else {
                 throw ParseError.truncatedPage(index: idx)
             }
-            let pageData = data.subdata(in: cursor..<(cursor + size))
-            out.append(contentsOf: try parsePage(pageData, pageIndex: idx))
+            let pageData = data.subdata(in: cursor ..< (cursor + size))
+            try out.append(contentsOf: parsePage(pageData, pageIndex: idx))
             cursor += size
         }
         return out
@@ -75,11 +75,11 @@ enum BinaryCookiesParser {
     private static func parsePage(_ page: Data, pageIndex: Int) throws -> [HTTPCookie] {
         // page magic 0x00000100 (read as LE uint32 == 256)
         guard page.count >= 8 else { throw ParseError.truncatedPage(index: pageIndex) }
-        let numCookies = Int(try page.readUInt32LE(at: 4))
+        let numCookies = try Int(page.readUInt32LE(at: 4))
         var offsets: [Int] = []
         offsets.reserveCapacity(numCookies)
-        for i in 0..<numCookies {
-            offsets.append(Int(try page.readUInt32LE(at: 8 + i * 4)))
+        for i in 0 ..< numCookies {
+            try offsets.append(Int(page.readUInt32LE(at: 8 + i * 4)))
         }
 
         var out: [HTTPCookie] = []
@@ -98,10 +98,10 @@ enum BinaryCookiesParser {
             throw ParseError.truncatedCookie(page: pageIndex, index: cookieIndex)
         }
         let flags = try page.readUInt32LE(at: off + 8)
-        let urlOff = Int(try page.readUInt32LE(at: off + 16))
-        let nameOff = Int(try page.readUInt32LE(at: off + 20))
-        let pathOff = Int(try page.readUInt32LE(at: off + 24))
-        let valueOff = Int(try page.readUInt32LE(at: off + 28))
+        let urlOff = try Int(page.readUInt32LE(at: off + 16))
+        let nameOff = try Int(page.readUInt32LE(at: off + 20))
+        let pathOff = try Int(page.readUInt32LE(at: off + 24))
+        let valueOff = try Int(page.readUInt32LE(at: off + 28))
         let expiresMac = try page.readFloat64LE(at: off + 40)
         // creation at off + 48 — not used by HTTPCookie
 
@@ -122,7 +122,7 @@ enum BinaryCookiesParser {
             .name: name,
             .value: value,
             .domain: url,
-            .path: path,
+            .path: path
         ]
         if (flags & 0x1) != 0 { props[.secure] = "TRUE" }
         // httponly via flag bit 2 has no public HTTPCookie key on iOS; we set isHTTPOnly via init param if needed
@@ -135,8 +135,10 @@ enum BinaryCookiesParser {
     private static func readCString(_ data: Data, at off: Int) -> String? {
         guard off >= 0, off < data.count else { return nil }
         var end = off
-        while end < data.count, data[end] != 0 { end += 1 }
-        let bytes = data.subdata(in: off..<end)
+        while end < data.count, data[end] != 0 {
+            end += 1
+        }
+        let bytes = data.subdata(in: off ..< end)
         return String(data: bytes, encoding: .utf8)
     }
 }
@@ -169,7 +171,7 @@ private extension Data {
             throw BinaryCookiesParser.ParseError.fileTooSmall
         }
         var bits: UInt64 = 0
-        for i in 0..<8 {
+        for i in 0 ..< 8 {
             bits |= UInt64(self[offset + i]) << (UInt64(i) * 8)
         }
         return Double(bitPattern: bits)
