@@ -4,17 +4,16 @@ on: [push, pull_request]
 
 jobs:
   format:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - run: brew install swiftformat swiftlint
       - run: Scripts/lint.sh
 
   compile:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      - run: sudo xcode-select -s /Applications/Xcode_15.4.app
       - run: brew install xcodegen xcbeautify
       - name: generate xcodeproj
         run: xcodegen generate --quiet
