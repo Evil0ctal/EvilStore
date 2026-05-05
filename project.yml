@@ -45,10 +45,6 @@ targets:
       - path: EvilStoreTests
     dependencies:
       - target: EvilStore
-    settings:
-      base:
-        BUNDLE_LOADER: $(TEST_HOST)
-        TEST_HOST: $(BUILT_PRODUCTS_DIR)/EvilStore.app/EvilStore
 
 schemes:
   EvilStore:
