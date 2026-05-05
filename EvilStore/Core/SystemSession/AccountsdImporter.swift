@@ -8,9 +8,6 @@ import Foundation
 /// requires private entitlements:
 ///   com.apple.accounts.appleaccount.fullaccess
 ///   com.apple.private.accounts.bundleidspoofing  (some ios versions)
-///
-/// the M0 entitlements.plist does NOT include them yet; they are added in
-/// docs/4 §1.2 once m0.5 PoC measurements come back from a real device.
 final class AccountsdImporter: SystemSessionImporter {
     let name = "accountsd"
 

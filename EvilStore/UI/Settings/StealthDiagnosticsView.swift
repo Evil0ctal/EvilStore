@@ -9,9 +9,6 @@ import UIKit
 /// debug-only screen that runs all SystemSessionImporter strategies and
 /// renders a redacted markdown report. exported via UIActivityViewController
 /// for AirDrop to the developer mac.
-///
-/// per docs/4 §5: this view is the single deliverable that lets us populate
-/// docs/m05_diagnostics/<ios-version>_<device>.md.
 struct StealthDiagnosticsView: View {
     @State private var results: [PathResult] = []
     @State private var running: Bool = false

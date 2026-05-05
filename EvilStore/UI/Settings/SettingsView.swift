@@ -3,8 +3,7 @@
 
 import SwiftUI
 
-/// placeholder Settings tab. M1 will replace with the §8 settings tree from
-/// docs/3 ui design.
+/// placeholder Settings tab. M1 fills in the real settings tree.
 struct SettingsView: View {
     var body: some View {
         NavigationView {
