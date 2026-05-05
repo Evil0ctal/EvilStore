@@ -4,7 +4,7 @@
 import SwiftUI
 
 @main
-struct EvilStoreApp: App {
+struct EvilStoreApp: SwiftUI.App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
