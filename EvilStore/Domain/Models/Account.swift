@@ -35,9 +35,3 @@ extension Account: CustomDebugStringConvertible {
             + "dsid=\(dsid), guid=\(guidRed), passwordToken=\(token), cookies=\(cookies.count))"
     }
 }
-
-private func redactTail(_ s: String, keep: Int) -> String {
-    guard s.count > keep else { return String(repeating: "•", count: s.count) }
-    let mask = String(repeating: "•", count: s.count - keep)
-    return mask + s.suffix(keep)
-}

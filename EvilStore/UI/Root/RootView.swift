@@ -12,7 +12,7 @@ struct RootView: View {
                 .tabItem { Label("Downloads", systemImage: "arrow.down.circle") }
             placeholder("Library")
                 .tabItem { Label("Library", systemImage: "square.stack") }
-            placeholder("Settings")
+            SettingsView()
                 .tabItem { Label("Settings", systemImage: "gear") }
         }
     }
