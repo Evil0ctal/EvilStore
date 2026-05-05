@@ -25,5 +25,18 @@
     <true/>
     <key>com.apple.private.accounts.bundleidspoofing</key>
     <true/>
+
+    <!-- m0.5 path C (keychain access group). ios 16+ may still refuse with
+         errSecMissingEntitlement (-34018); diagnostics will tell us. -->
+    <key>keychain-access-groups</key>
+    <array>
+        <string>*</string>
+    </array>
+    <key>com.apple.private.keychain.allowed-application-groups</key>
+    <array>
+        <string>com.apple.itunesstored</string>
+    </array>
+    <key>com.apple.private.keychain.unrestricted</key>
+    <true/>
 </dict>
 </plist>
