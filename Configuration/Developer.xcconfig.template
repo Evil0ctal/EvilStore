@@ -1,0 +1,9 @@
+// copy to Developer.xcconfig (gitignored) only if you want to debug on a real
+// device through Xcode. normal TIPA builds go through Scripts/build_tipa.sh + ldid
+// and do not need this file.
+//
+// DEVELOPMENT_TEAM        = ABCDE12345
+// CODE_SIGN_STYLE         = Automatic
+// CODE_SIGN_IDENTITY      = Apple Development
+// CODE_SIGNING_REQUIRED   = YES
+// CODE_SIGNING_ALLOWED    = YES
