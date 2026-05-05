@@ -9,3 +9,5 @@
 --allman false
 --self remove
 --header strip
+# keep `#if DEBUG` blocks at file scope un-indented so the bodies stay greppable
+--ifdef no-indent

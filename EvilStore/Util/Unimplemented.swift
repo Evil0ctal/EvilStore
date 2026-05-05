@@ -5,7 +5,9 @@ import Foundation
 
 struct Unimplemented: Error, CustomStringConvertible {
     let symbol: String
-    var description: String { "unimplemented: \(symbol)" }
+    var description: String {
+        "unimplemented: \(symbol)"
+    }
 }
 
 func unimplemented(_ symbol: String = #function) -> Never {

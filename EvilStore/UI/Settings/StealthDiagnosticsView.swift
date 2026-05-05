@@ -115,7 +115,7 @@ struct StealthDiagnosticsView: View {
             let probes: [(code: String, name: String, importer: SystemSessionImporter)] = [
                 ("A", "accountsd", AccountsdImporter()),
                 ("B", "filesystem", FileSystemImporter()),
-                ("C", "keychain", KeychainImporter()),
+                ("C", "keychain", KeychainImporter())
                 // path D (xpc storeaccountd) intentionally unimplemented in m0.5
             ]
             var collected: [PathResult] = []
@@ -155,9 +155,9 @@ struct StealthDiagnosticsView: View {
                 elapsed: 0
             ))
             await MainActor.run {
-                self.results = collected
-                self.running = false
-                self.lastReport = renderMarkdown(collected)
+                results = collected
+                running = false
+                lastReport = renderMarkdown(collected)
             }
         }
     }
@@ -212,19 +212,19 @@ struct StealthDiagnosticsView: View {
 
     private func symbol(_ s: PathStatus) -> String {
         switch s {
-        case .ok:       return "[✓]"
-        case .failed:   return "[✗]"
-        case .denied:   return "[✗]"
-        case .skipped:  return "[·]"
+        case .ok: return "[✓]"
+        case .failed: return "[✗]"
+        case .denied: return "[✗]"
+        case .skipped: return "[·]"
         }
     }
 
     private func color(_ s: PathStatus) -> Color {
         switch s {
-        case .ok:       return .green
-        case .failed:   return .red
-        case .denied:   return .red
-        case .skipped:  return .secondary
+        case .ok: return .green
+        case .failed: return .red
+        case .denied: return .red
+        case .skipped: return .secondary
         }
     }
 }
@@ -248,10 +248,11 @@ private struct PathResult: Identifiable {
 
 private struct ActivityView: UIViewControllerRepresentable {
     let items: [Any]
-    func makeUIViewController(context: Context) -> UIActivityViewController {
+    func makeUIViewController(context _: Context) -> UIActivityViewController {
         UIActivityViewController(activityItems: items, applicationActivities: nil)
     }
-    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+
+    func updateUIViewController(_: UIActivityViewController, context _: Context) {}
 }
 
 #endif

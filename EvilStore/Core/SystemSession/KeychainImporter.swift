@@ -26,7 +26,7 @@ final class KeychainImporter: SystemSessionImporter {
             kSecClass: kSecClassGenericPassword,
             kSecAttrAccessGroup: accessGroup,
             kSecMatchLimit: kSecMatchLimitOne,
-            kSecReturnAttributes: true,
+            kSecReturnAttributes: true
         ]
         var out: CFTypeRef?
         let status = SecItemCopyMatching(q as CFDictionary, &out)
@@ -75,7 +75,7 @@ final class KeychainImporter: SystemSessionImporter {
             kSecAttrAccessGroup: accessGroup,
             kSecMatchLimit: kSecMatchLimitAll,
             kSecReturnAttributes: true,
-            kSecReturnData: true,
+            kSecReturnData: true
         ]
         var out: CFTypeRef?
         let status = SecItemCopyMatching(q as CFDictionary, &out)
@@ -84,7 +84,8 @@ final class KeychainImporter: SystemSessionImporter {
         }
         guard status == errSecSuccess, let arr = out as? [[CFString: Any]] else {
             throw SystemSessionError.entitlementDenied(
-                "SecItemCopyMatching status=\(status) (errSecMissingEntitlement is -34018)")
+                "SecItemCopyMatching status=\(status) (errSecMissingEntitlement is -34018)"
+            )
         }
         return arr
     }
@@ -97,7 +98,8 @@ final class KeychainImporter: SystemSessionImporter {
                 return str
             }
             if let data = item[kSecValueData] as? Data,
-               let str = String(data: data, encoding: .utf8), !str.isEmpty {
+               let str = String(data: data, encoding: .utf8), !str.isEmpty
+            {
                 return str
             }
         }
