@@ -39,3 +39,6 @@ logs/
 # scratch
 tmp/
 .tmp/
+
+# design docs are kept locally only; public repo carries README + LICENSE only
+docs/
