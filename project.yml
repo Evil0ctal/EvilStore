@@ -1,0 +1,63 @@
+name: EvilStore
+
+options:
+  bundleIdPrefix: com.evil0ctal
+  deploymentTarget:
+    iOS: "14.0"
+  developmentLanguage: en
+  groupSortPosition: top
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+  defaultConfig: Release
+
+configs:
+  Debug: debug
+  Release: release
+
+configFiles:
+  Debug: Configuration/Debug.xcconfig
+  Release: Configuration/Release.xcconfig
+
+settings:
+  base:
+    GENERATE_INFOPLIST_FILE: NO
+
+targets:
+  EvilStore:
+    type: application
+    platform: iOS
+    sources:
+      - path: EvilStore/App
+      - path: EvilStore/UI
+      - path: EvilStore/Resources/Assets.xcassets
+    settings:
+      base:
+        INFOPLIST_FILE: EvilStore/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: EvilStore/Resources/entitlements.plist
+
+  EvilStoreTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: EvilStoreTests
+    dependencies:
+      - target: EvilStore
+    settings:
+      base:
+        BUNDLE_LOADER: $(TEST_HOST)
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/EvilStore.app/EvilStore
+
+schemes:
+  EvilStore:
+    build:
+      targets:
+        EvilStore: all
+        EvilStoreTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - EvilStoreTests
+    archive:
+      config: Release

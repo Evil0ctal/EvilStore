@@ -1,0 +1,42 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  tipa:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: select xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: install ldid + xcodegen + xcbeautify
+        run: brew install ldid xcodegen xcbeautify
+
+      - name: cache deriveddata
+        uses: actions/cache@v4
+        with:
+          path: build/DerivedData
+          key: dd-${{ runner.os }}-${{ hashFiles('project.yml', 'Configuration/*.xcconfig') }}
+
+      - name: build tipa
+        run: Scripts/build_tipa.sh
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EvilStore-tipa
+          path: build/EvilStore.tipa
+
+      - name: release on tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/EvilStore.tipa
+          generate_release_notes: true

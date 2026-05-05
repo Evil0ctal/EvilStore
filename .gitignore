@@ -1,0 +1,41 @@
+# macOS
+.DS_Store
+*.swp
+
+# Xcode
+# .xcodeproj is generated from project.yml by xcodegen; never commit
+EvilStore.xcodeproj/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+DerivedData/
+build/
+*.xcarchive
+
+# personal signing config — never committed
+Configuration/Developer.xcconfig
+
+# SPM
+.swiftpm/
+# Package.resolved is committed for reproducible builds
+
+# build outputs
+*.ipa
+*.tipa
+*.dSYM.zip
+
+# IDE
+.idea/
+.vscode/
+
+# python helpers
+__pycache__/
+*.pyc
+
+# logs
+*.log
+logs/
+
+# scratch
+tmp/
+.tmp/
