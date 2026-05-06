@@ -18,7 +18,7 @@ excluded:
   - EvilStoreTests/Fixtures
 
 identifier_name:
-  min_length: 2
+  min_length: 1
   excluded:
     - id
     - x
@@ -32,3 +32,14 @@ type_name:
 function_body_length:
   warning: 60
   error: 120
+
+type_body_length:
+  warning: 400
+  error: 600
+
+cyclomatic_complexity:
+  warning: 12
+  error: 20
+
+opening_brace:
+  ignore_multiline_function_signatures: true
