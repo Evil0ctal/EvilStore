@@ -3,13 +3,16 @@
 
 import SwiftUI
 
-/// placeholder Settings tab. M1 fills in the real settings tree.
+/// settings tab. m1 placeholder; future milestones expand this with manual
+/// account management, GUID export, log export.
 struct SettingsView: View {
+    @EnvironmentObject private var accountStore: AccountStore
+
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("DEBUG").font(.caption)) {
-                    #if DEBUG
+                Section(header: Text("ACCOUNT").font(.caption)) {
+                    accountSummary
                     NavigationLink {
                         StealthDiagnosticsView()
                     } label: {
@@ -18,16 +21,19 @@ struct SettingsView: View {
                                 .foregroundColor(.accentColor)
                             Text("Stealth diagnostics")
                             Spacer()
-                            Text("debug")
+                            Image(systemName: "chevron.right")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
                     }
-                    #else
-                    Text("debug-only entries hidden in release")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    #endif
+                    Button {
+                        Task { await accountStore.bootstrap(force: true) }
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.clockwise")
+                            Text("Re-probe stealth paths")
+                        }
+                    }
                 }
 
                 Section(header: Text("ABOUT").font(.caption)) {
@@ -44,6 +50,52 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
+    }
+
+    @ViewBuilder
+    private var accountSummary: some View {
+        switch accountStore.state {
+        case .idle:
+            Label("not probed yet", systemImage: "circle")
+                .foregroundColor(.secondary)
+        case .probing:
+            HStack(spacing: 8) {
+                ProgressView()
+                Text("probing system app store")
+                    .foregroundColor(.secondary)
+            }
+        case .ready:
+            VStack(alignment: .leading, spacing: 2) {
+                Label("borrowed system session", systemImage: "checkmark.seal")
+                    .foregroundColor(.green)
+                if let acc = accountStore.active {
+                    Text(acc.email.isEmpty ? "(no email)" : acc.email)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("storefront: \(acc.storefront)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+        case .noSession:
+            VStack(alignment: .leading, spacing: 4) {
+                Label("not logged in to App Store", systemImage: "questionmark.circle")
+                    .foregroundColor(.orange)
+                Text("open Settings › Apple ID, sign in, then re-probe.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        case let .failed(message):
+            VStack(alignment: .leading, spacing: 4) {
+                Label("stealth probe failed", systemImage: "exclamationmark.triangle")
+                    .foregroundColor(.red)
+                Text(message)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .lineLimit(4)
+            }
         }
     }
 

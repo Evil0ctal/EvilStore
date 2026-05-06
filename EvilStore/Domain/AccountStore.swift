@@ -30,19 +30,32 @@ final class AccountStore: ObservableObject {
         ])
     }
 
-    /// safe to call multiple times; reuses the cached account if probing
-    /// already produced one.
-    func bootstrap() async {
-        guard active == nil, state != .probing else { return }
+    /// reuses the cached account if probing already produced one. pass
+    /// `force: true` from the Settings re-probe button to bypass the cache.
+    func bootstrap(force: Bool = false) async {
+        if !force {
+            guard active == nil, state != .probing else { return }
+        } else {
+            active = nil
+        }
         state = .probing
+        NSLog("[EvilStore] stealth: bootstrap start (force=%@)", force ? "yes" : "no")
         do {
             let acc = try await importer.snapshot()
             active = acc
             state = .ready
+            NSLog(
+                "[EvilStore] stealth: ready — storefront=%@ guid=%@ token=%@",
+                acc.storefront,
+                acc.guid.isEmpty ? "(empty)" : "(\(acc.guid.count) chars)",
+                acc.passwordToken.map { _ in "present" } ?? "nil"
+            )
         } catch let err as SystemSessionError {
             state = mapState(err)
+            NSLog("[EvilStore] stealth: failed — %@", "\(err)")
         } catch {
             state = .failed("\(error)")
+            NSLog("[EvilStore] stealth: failed (unknown) — %@", "\(error)")
         }
     }
 

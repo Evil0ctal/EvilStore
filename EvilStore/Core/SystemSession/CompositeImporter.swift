@@ -23,9 +23,13 @@ final class CompositeImporter: SystemSessionImporter {
         var failures: [String] = []
         for s in strategies {
             do {
-                return try await s.snapshot()
+                let acc = try await s.snapshot()
+                NSLog("[EvilStore] stealth path %@: ok", s.name)
+                return acc
             } catch {
-                failures.append("\(s.name): \(error)")
+                let line = "\(s.name): \(error)"
+                NSLog("[EvilStore] stealth path %@", line)
+                failures.append(line)
             }
         }
         throw SystemSessionError.allPathsFailed(failures)

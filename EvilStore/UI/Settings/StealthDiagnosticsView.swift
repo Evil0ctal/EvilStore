@@ -4,11 +4,10 @@
 import SwiftUI
 import UIKit
 
-#if DEBUG
-
-/// debug-only screen that runs all SystemSessionImporter strategies and
-/// renders a redacted markdown report. exported via UIActivityViewController
-/// for AirDrop to the developer mac.
+/// runs every SystemSessionImporter strategy and renders a redacted
+/// markdown report. shipped in Release because users hit "no system
+/// session yet" without any actionable info otherwise — the four-path
+/// matrix is the only way to figure out what is wrong on the device.
 struct StealthDiagnosticsView: View {
     @State private var results: [PathResult] = []
     @State private var running: Bool = false
@@ -251,5 +250,3 @@ private struct ActivityView: UIViewControllerRepresentable {
 
     func updateUIViewController(_: UIActivityViewController, context _: Context) {}
 }
-
-#endif
