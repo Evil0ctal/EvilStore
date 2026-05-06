@@ -6,11 +6,16 @@ import SwiftUI
 @main
 struct EvilStoreApp: SwiftUI.App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @StateObject private var accountStore = AccountStore()
 
     var body: some Scene {
         WindowGroup {
             RootView()
+                .environmentObject(accountStore)
                 .preferredColorScheme(.dark)
+                .onAppear {
+                    Task { await accountStore.bootstrap() }
+                }
         }
     }
 }

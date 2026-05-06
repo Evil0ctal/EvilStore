@@ -154,7 +154,9 @@ struct SearchView: View {
 
     private var resultsList: some View {
         List(vm.results) { app in
-            SearchResultRow(app: app)
+            NavigationLink(destination: AppDetailView(app: app)) {
+                SearchResultRow(app: app)
+            }
         }
         .listStyle(PlainListStyle())
     }
