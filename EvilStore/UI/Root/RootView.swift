@@ -8,7 +8,7 @@ struct RootView: View {
         TabView {
             SearchView()
                 .tabItem { Label("Search", systemImage: "magnifyingglass") }
-            placeholder("Downloads")
+            DownloadsView()
                 .tabItem { Label("Downloads", systemImage: "arrow.down.circle") }
             placeholder("Library")
                 .tabItem { Label("Library", systemImage: "square.stack") }
