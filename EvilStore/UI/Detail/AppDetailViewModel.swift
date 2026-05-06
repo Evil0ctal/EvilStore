@@ -40,9 +40,50 @@ final class AppDetailViewModel: ObservableObject {
             state = .loaded
         } catch let err as ListVersions.Error {
             state = .failed(format(err))
+            return
         } catch {
             state = .failed("\(error)")
+            return
         }
+        await resolveMetadata(account: account)
+    }
+
+    /// fetches displayVersion + releaseDate for each external identifier
+    /// sequentially. the AsyncThrottle inside HTTPClient already paces
+    /// calls at >=500ms so storefront rate limits stay happy.
+    private func resolveMetadata(account: Account) async {
+        let externalIDs = versions.map(\.externalIdentifier)
+        for ext in externalIDs {
+            if Task.isCancelled { return }
+            do {
+                let resolved = try await client.versionMetadata(
+                    externalIdentifier: ext,
+                    account: account,
+                    app: app
+                )
+                patch(externalIdentifier: ext, with: resolved)
+            } catch is CancellationError {
+                return
+            } catch {
+                // leave the row showing "ext NNNNN" — partial resolution is OK
+                continue
+            }
+        }
+    }
+
+    private func patch(
+        externalIdentifier: String,
+        with resolved: VersionMetadata.Resolved
+    ) {
+        guard let idx = versions.firstIndex(where: { $0.externalIdentifier == externalIdentifier }) else {
+            return
+        }
+        versions[idx] = VersionInfo(
+            externalIdentifier: externalIdentifier,
+            displayVersion: resolved.displayVersion,
+            releaseDate: resolved.releaseDate,
+            resolvedAt: Date()
+        )
     }
 
     private func format(_ err: ListVersions.Error) -> String {
