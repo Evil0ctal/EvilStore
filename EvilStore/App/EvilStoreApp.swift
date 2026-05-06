@@ -6,16 +6,36 @@ import SwiftUI
 @main
 struct EvilStoreApp: SwiftUI.App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var accountStore = AccountStore()
+
+    private let services: AppServices
+
+    init() {
+        FileLayout.ensureDirs()
+        services = AppServices()
+    }
 
     var body: some Scene {
         WindowGroup {
             RootView()
-                .environmentObject(accountStore)
+                .environmentObject(services.accountStore)
+                .environmentObject(services.downloadService)
                 .preferredColorScheme(.dark)
                 .onAppear {
-                    Task { await accountStore.bootstrap() }
+                    Task { await services.accountStore.bootstrap() }
                 }
         }
+    }
+}
+
+/// holds the app-wide singletons. main thread; constructed once on launch.
+@MainActor
+final class AppServices {
+    let accountStore: AccountStore
+    let downloadService: DownloadService
+
+    init() {
+        let accountStore = AccountStore()
+        self.accountStore = accountStore
+        downloadService = DownloadService(accountStore: accountStore)
     }
 }

@@ -15,6 +15,11 @@ protocol AppStoreClient {
         account: Account,
         app: App
     ) async throws -> VersionMetadata.Resolved
+    func download(
+        externalIdentifier: String?,
+        account: Account,
+        app: App
+    ) async throws -> DownloadArtifact
 }
 
 /// production implementation. holds one HTTPClient (and therefore one
@@ -44,6 +49,19 @@ struct AppStoreClientLive: AppStoreClient {
         app: App
     ) async throws -> VersionMetadata.Resolved {
         try await VersionMetadata.run(
+            externalIdentifier: externalIdentifier,
+            account: account,
+            app: app,
+            client: http
+        )
+    }
+
+    func download(
+        externalIdentifier: String?,
+        account: Account,
+        app: App
+    ) async throws -> DownloadArtifact {
+        try await Download.run(
             externalIdentifier: externalIdentifier,
             account: account,
             app: app,
