@@ -6,7 +6,7 @@ import SwiftUI
 struct RootView: View {
     var body: some View {
         TabView {
-            placeholder("Search")
+            SearchView()
                 .tabItem { Label("Search", systemImage: "magnifyingglass") }
             placeholder("Downloads")
                 .tabItem { Label("Downloads", systemImage: "arrow.down.circle") }

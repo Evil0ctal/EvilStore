@@ -29,6 +29,9 @@ targets:
     sources:
       - path: EvilStore/App
       - path: EvilStore/UI
+      - path: EvilStore/Domain
+      - path: EvilStore/Core
+      - path: EvilStore/Util
       - path: EvilStore/Resources/Assets.xcassets
     settings:
       base:
