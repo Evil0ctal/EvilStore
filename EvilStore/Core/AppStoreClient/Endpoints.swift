@@ -51,4 +51,14 @@ enum Endpoints {
         ]
         return c.url!
     }
+
+    /// listVersions/download share the same private endpoint; differ in payload only.
+    static func privateStorefront(pod: String?, guid: String) -> URL {
+        var c = URLComponents()
+        c.scheme = "https"
+        c.host = storeHost(pod: pod)
+        c.path = pathDownload
+        c.queryItems = [.init(name: "guid", value: guid)]
+        return c.url!
+    }
 }

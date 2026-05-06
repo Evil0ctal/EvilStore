@@ -3,12 +3,13 @@
 
 import Foundation
 
-/// public surface for everything storefront-related. M1 implements only the
-/// auth-free pieces (lookup + search); list-versions, purchase, download land
-/// in M2+ once the system-session importer ships a real Account.
+/// public surface for everything storefront-related. m1 wired up the auth-free
+/// pieces (lookup + search). m2 adds listVersions which needs an Account.
+/// purchase + download arrive in m3.
 protocol AppStoreClient {
     func search(term: String, country: String, limit: Int) async throws -> [App]
     func lookup(bundleID: String, country: String) async throws -> App
+    func listVersions(account: Account, app: App) async throws -> [String]
 }
 
 /// production implementation. holds one HTTPClient (and therefore one
@@ -26,5 +27,9 @@ struct AppStoreClientLive: AppStoreClient {
 
     func lookup(bundleID: String, country: String) async throws -> App {
         try await Lookup.byBundleID(bundleID, country: country, client: http)
+    }
+
+    func listVersions(account: Account, app: App) async throws -> [String] {
+        try await ListVersions.run(account: account, app: app, client: http)
     }
 }
