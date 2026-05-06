@@ -111,8 +111,9 @@ struct StealthDiagnosticsView: View {
             let probes: [(code: String, name: String, importer: SystemSessionImporter)] = [
                 ("A", "accountsd", AccountsdImporter()),
                 ("B", "filesystem", FileSystemImporter()),
-                ("C", "keychain", KeychainImporter())
-                // path D (xpc storeaccountd) intentionally unimplemented in m0.5
+                ("C", "keychain", KeychainImporter()),
+                ("D", "storekit", StoreKitImporter()),
+                ("E", "discover", FilesystemDiscoveryImporter())
             ]
             var collected: [PathResult] = []
             for p in probes {
@@ -144,12 +145,6 @@ struct StealthDiagnosticsView: View {
                     ))
                 }
             }
-            collected.append(PathResult(
-                code: "D", name: "xpc storeaccountd",
-                status: .skipped,
-                detail: "not implemented in m0.5",
-                elapsed: 0
-            ))
             await MainActor.run {
                 results = collected
                 running = false
