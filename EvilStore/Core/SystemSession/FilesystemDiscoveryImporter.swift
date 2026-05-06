@@ -89,16 +89,142 @@ final class FilesystemDiscoveryImporter: SystemSessionImporter {
         }
 
         // m5e: dump the two plist preferences that exist on this device
+        // m5f: AppleMediaServices is the modern auth surface for storefront
+        // calls; appleaccountd handles Apple ID auth; AppStore is the client
         lines.append("== plist dumps (values redacted if long) ==")
         let plistDumps = [
             "/var/mobile/Library/Preferences/com.apple.itunesstored.plist",
-            "/var/mobile/Library/Preferences/com.apple.appstored.plist"
+            "/var/mobile/Library/Preferences/com.apple.appstored.plist",
+            "/var/mobile/Library/Preferences/com.apple.AppleMediaServices.plist",
+            "/var/mobile/Library/Preferences/com.apple.AppleMediaServices.notbackedup.plist",
+            "/var/mobile/Library/Preferences/com.apple.appleaccountd.plist",
+            "/var/mobile/Library/Preferences/com.apple.AppStore.plist",
+            "/var/mobile/Library/Preferences/com.apple.itunescloud.plist",
+            "/var/mobile/Library/Preferences/com.apple.itunescloud.daemon.plist",
+            "/var/mobile/Library/Preferences/com.apple.storebookkeeper.plist",
+            "/var/mobile/Library/Preferences/com.apple.storebookkeeperd.plist",
+            "/var/mobile/Library/Preferences/com.apple.mobilestoresettings.plist",
+            "/var/mobile/Library/Preferences/com.apple.iapd.plist"
         ]
         for plistPath in plistDumps {
             lines.append(contentsOf: dumpPlist(plistPath))
         }
 
+        // m5f: list ALL InternalDaemon containers regardless of identifier
+        // — we previously filtered too narrowly and missed everything.
+        lines.append("== all InternalDaemon containers (unfiltered) ==")
+        lines.append(contentsOf: listAllInternalDaemons())
+
+        // m5f: probe additional storeaccountd-related sqlite locations
+        lines.append("== additional sqlite probe ==")
+        let extraDbCandidates = [
+            "/var/mobile/Library/AppleMediaServices/PersonalizedRequestCache.sqlite",
+            "/var/mobile/Library/com.apple.appleaccountd/AppleAccount.sqlite",
+            "/var/mobile/Library/Application Support/com.apple.appstored/asd.db"
+        ]
+        for dbPath in extraDbCandidates {
+            lines.append(contentsOf: probeSqlite(dbPath))
+        }
+
+        // m5f: list directories that might contain auth state
+        lines.append("== additional directory scans ==")
+        let extraDirs = [
+            "/var/mobile/Library/AppleMediaServices",
+            "/var/mobile/Library/com.apple.appleaccountd",
+            "/var/mobile/Library/Application Support/com.apple.appstored",
+            "/var/mobile/Library/Application Support/com.apple.appleaccountd"
+        ]
+        for d in extraDirs {
+            lines.append(listDir(d))
+        }
+
+        // m5f: try keychain query without explicit access group constraint —
+        // see what we can read at all
+        lines.append("== keychain wide scan ==")
+        lines.append(contentsOf: probeKeychain())
+
         return lines.joined(separator: "\n  ")
+    }
+
+    private func listAllInternalDaemons() -> [String] {
+        let root = "/var/mobile/Containers/Data/InternalDaemon"
+        let fm = FileManager.default
+        guard let uuids = try? fm.contentsOfDirectory(atPath: root) else {
+            return ["[-] \(root)/ unreadable"]
+        }
+        var out: [String] = []
+        for uuid in uuids.sorted() {
+            let metaPath = "\(root)/\(uuid)/.com.apple.mobile_container_manager.metadata.plist"
+            let id: String
+            if fm.fileExists(atPath: metaPath),
+               let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
+               let plist = try? PropertyListSerialization
+               .propertyList(from: data, options: [], format: nil) as? [String: Any],
+               let mid = plist["MCMMetadataIdentifier"] as? String
+            {
+                id = mid
+            } else {
+                id = "(no metadata)"
+            }
+            out.append("[\(uuid)] → \(id)")
+            // also list its Library/ contents shallowly
+            let lib = "\(root)/\(uuid)/Library"
+            if let names = try? fm.contentsOfDirectory(atPath: lib) {
+                let listing = names.sorted().joined(separator: ",")
+                out.append("    Library/: \(listing)")
+            }
+        }
+        return out
+    }
+
+    private func probeKeychain() -> [String] {
+        // try a few queries:
+        //  - generic password without access group constraint
+        //  - generic password against a few candidate access groups
+        let groups: [String?] = [
+            nil,
+            "com.apple.itunesstored",
+            "com.apple.AppleMediaServices",
+            "com.apple.appleaccountd",
+            "com.apple.AppStore",
+            "com.apple.AppStoreClient",
+            "com.apple.iTunesStore",
+            "com.apple.gs.appleid.auth",
+            "*"
+        ]
+        var out: [String] = []
+        for g in groups {
+            var q: [CFString: Any] = [
+                kSecClass: kSecClassGenericPassword,
+                kSecMatchLimit: kSecMatchLimitAll,
+                kSecReturnAttributes: true
+            ]
+            if let g { q[kSecAttrAccessGroup] = g }
+            var ref: CFTypeRef?
+            let status = SecItemCopyMatching(q as CFDictionary, &ref)
+            let label = g ?? "(no group)"
+            switch status {
+            case errSecSuccess:
+                let arr = ref as? [[CFString: Any]] ?? []
+                let summary = arr.prefix(20).compactMap { item -> String? in
+                    let svc = (item[kSecAttrService] as? String) ?? "?"
+                    let acc = (item[kSecAttrAccount] as? String) ?? "?"
+                    return "      • svc=\(svc) acc=\(acc)"
+                }
+                out.append("[+] \(label) : \(arr.count) items")
+                out.append(contentsOf: summary)
+                if arr.count > 20 {
+                    out.append("      ... \(arr.count - 20) more")
+                }
+            case errSecItemNotFound:
+                out.append("[·] \(label) : empty")
+            case -34018:
+                out.append("[!] \(label) : errSecMissingEntitlement (-34018)")
+            default:
+                out.append("[!] \(label) : status=\(status)")
+            }
+        }
+        return out
     }
 
     // MARK: - sqlite
