@@ -66,12 +66,27 @@ cp -R "$APP_SRC" "$STAGE/Payload/EvilStore.app"
 
 echo "==> ldid fakesign with entitlements"
 ldid -S"$ENTITLEMENTS" "$STAGE/Payload/EvilStore.app/EvilStore"
-# also fakesign embedded dylibs/frameworks so SPM binaries don't fail amfi
-find "$STAGE/Payload/EvilStore.app" -type f \( -name "*.dylib" -o -name "*.framework" \) -print0 \
-    | while IFS= read -r -d '' f; do
-        echo "    sign $f"
-        ldid -S "$f"
-    done
+
+# fakesign every embedded Mach-O so SPM frameworks (ZIPFoundation, etc.)
+# pass amfi at launch. detection is by magic bytes — Mach-O signatures
+# are feedface, feedfacf, cefaedfe, cffaedfe, cafebabe (fat binary).
+sign_macho_in() {
+    local root="$1"
+    [[ -d "$root" ]] || return 0
+    while IFS= read -r -d '' f; do
+        local magic
+        magic=$(xxd -p -l 4 "$f" 2>/dev/null || true)
+        case "$magic" in
+            feedface|feedfacf|cefaedfe|cffaedfe|cafebabe)
+                echo "    sign $f"
+                ldid -S "$f"
+                ;;
+        esac
+    done < <(find "$root" -type f -print0)
+}
+
+sign_macho_in "$STAGE/Payload/EvilStore.app/Frameworks"
+sign_macho_in "$STAGE/Payload/EvilStore.app/PlugIns"
 
 echo "==> zip -> $OUTPUT"
 mkdir -p "$(dirname "$OUTPUT")"

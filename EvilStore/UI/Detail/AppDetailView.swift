@@ -9,6 +9,7 @@ import SwiftUI
 struct AppDetailView: View {
     @StateObject private var vm: AppDetailViewModel
     @EnvironmentObject private var accountStore: AccountStore
+    @EnvironmentObject private var downloads: DownloadService
 
     init(app: App) {
         _vm = StateObject(wrappedValue: AppDetailViewModel(app: app))
@@ -105,10 +106,16 @@ struct AppDetailView: View {
                         VersionRow(
                             info: v,
                             isLatest: v.externalIdentifier == vm.versions.first?.externalIdentifier,
-                            isSelected: v.externalIdentifier == vm.selectedVersionID
-                        ) {
-                            vm.selectedVersionID = v.externalIdentifier
-                        }
+                            isSelected: v.externalIdentifier == vm.selectedVersionID,
+                            onTap: { vm.selectedVersionID = v.externalIdentifier },
+                            onDownload: { info in
+                                downloads.enqueue(
+                                    app: vm.app,
+                                    externalIdentifier: info.externalIdentifier,
+                                    displayVersion: info.displayVersion
+                                )
+                            }
+                        )
                     }
                 }
             }
@@ -148,6 +155,7 @@ private struct VersionRow: View {
     let isLatest: Bool
     let isSelected: Bool
     let onTap: () -> Void
+    let onDownload: ((VersionInfo) -> Void)?
 
     var body: some View {
         Button(action: onTap) {
@@ -189,11 +197,20 @@ private struct VersionRow: View {
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
-                    if isSelected {
-                        Text("Download — coming in m3")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .padding(.top, 4)
+                    if isSelected, let onDownload {
+                        Button {
+                            onDownload(info)
+                        } label: {
+                            Text("Download")
+                                .font(.caption.bold())
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 6)
+                                .background(Color.accentColor)
+                                .cornerRadius(8)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(.top, 4)
                     }
                 }
                 Spacer()

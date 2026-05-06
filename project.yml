@@ -22,6 +22,11 @@ settings:
   base:
     GENERATE_INFOPLIST_FILE: NO
 
+packages:
+  ZIPFoundation:
+    url: https://github.com/weichsel/ZIPFoundation.git
+    from: 0.9.19
+
 targets:
   EvilStore:
     type: application
@@ -33,6 +38,8 @@ targets:
       - path: EvilStore/Core
       - path: EvilStore/Util
       - path: EvilStore/Resources/Assets.xcassets
+    dependencies:
+      - package: ZIPFoundation
     settings:
       base:
         INFOPLIST_FILE: EvilStore/Resources/Info.plist
