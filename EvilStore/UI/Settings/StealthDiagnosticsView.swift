@@ -113,7 +113,8 @@ struct StealthDiagnosticsView: View {
                 ("B", "filesystem", FileSystemImporter()),
                 ("C", "keychain", KeychainImporter()),
                 ("D", "storekit", StoreKitImporter()),
-                ("E", "discover", FilesystemDiscoveryImporter())
+                ("E", "discover", FilesystemDiscoveryImporter()),
+                ("F", "itunescloud", ITunesCloudImporter())
             ]
             var collected: [PathResult] = []
             for p in probes {
