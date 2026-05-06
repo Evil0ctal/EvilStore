@@ -30,6 +30,7 @@ final class AccountStore: ObservableObject {
         self.importer = importer ?? CompositeImporter(strategies: [
             AccountsdImporter(),
             StoreKitImporter(),
+            ITunesCloudImporter(),
             FileSystemImporter(),
             KeychainImporter()
         ])
