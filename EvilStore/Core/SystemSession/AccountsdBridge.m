@@ -70,31 +70,58 @@ static NSDictionary *copyForType(NSString *typeID) {
     if (acc.username.length > 0)   out[@"email"] = acc.username;
     if (acc.identifier.length > 0) out[@"identifier"] = acc.identifier;
 
-    // Private surface — names drift across ios versions, walk candidates
-    @try {
-        NSDictionary *props = [acc valueForKey:@"properties"];
-        if ([props isKindOfClass:[NSDictionary class]]) {
-            tryKeys(props, @[@"DSID", @"DSPersonID", @"dsid"],         out, @"dsid");
-            tryKeys(props, @[@"AltDSID", @"altDSID"],                  out, @"altDSID");
-            tryKeys(props, @[@"storefront", @"Storefront", @"StoreFront"], out, @"storefront");
-        }
-    } @catch (__unused NSException *exc) {}
+    // Private surface — names drift across ios versions and across the
+    // ACAccount, its `properties` dict, its `userInfo` dict, and the
+    // ACAccountCredential. walk every candidate for every key.
+    NSArray<NSString *> *dsidKeys = @[@"DSID", @"DSPersonID", @"dsid", @"DsPersonId"];
+    NSArray<NSString *> *altDsidKeys = @[@"AltDSID", @"altDSID", @"alt-dsid"];
+    NSArray<NSString *> *storefrontKeys = @[
+        @"storefront", @"Storefront", @"StoreFront",
+        @"X-Apple-Store-Front", @"storefrontIdentifier", @"storefrontISO",
+    ];
 
-    // accountProperties on some ios majors holds the same dict
-    if (!out[@"dsid"]) {
+    NSArray<NSString *> *containerKeys = @[
+        @"properties", @"accountProperties", @"userInfo", @"options",
+    ];
+
+    for (NSString *containerKey in containerKeys) {
         @try {
-            NSDictionary *props = [acc valueForKey:@"accountProperties"];
-            if ([props isKindOfClass:[NSDictionary class]]) {
-                tryKeys(props, @[@"DSID", @"DSPersonID"],          out, @"dsid");
-                tryKeys(props, @[@"AltDSID"],                      out, @"altDSID");
-                tryKeys(props, @[@"storefront", @"Storefront"],    out, @"storefront");
+            id container = [acc valueForKey:containerKey];
+            if ([container isKindOfClass:[NSDictionary class]]) {
+                if (!out[@"dsid"])       tryKeys(container, dsidKeys,       out, @"dsid");
+                if (!out[@"altDSID"])    tryKeys(container, altDsidKeys,    out, @"altDSID");
+                if (!out[@"storefront"]) tryKeys(container, storefrontKeys, out, @"storefront");
             }
         } @catch (__unused NSException *exc) {}
     }
 
+    // direct properties on the account itself (some ios versions expose
+    // storefrontIdentifier as a top-level KVC property)
+    if (!out[@"storefront"]) {
+        for (NSString *k in storefrontKeys) {
+            @try {
+                id v = [acc valueForKey:k];
+                if (v && v != [NSNull null]) {
+                    putString(out, @"storefront", v);
+                    if (out[@"storefront"]) break;
+                }
+            } @catch (__unused NSException *exc) {}
+        }
+    }
+
+    // credential carries the oauthToken plus, on some ios versions,
+    // a properties dict that includes the storefront.
     @try {
         ACAccountCredential *cred = acc.credential;
         if (cred.oauthToken.length > 0) out[@"oauthToken"] = cred.oauthToken;
+
+        @try {
+            id credProps = [cred valueForKey:@"properties"];
+            if ([credProps isKindOfClass:[NSDictionary class]]) {
+                if (!out[@"storefront"]) tryKeys(credProps, storefrontKeys, out, @"storefront");
+                if (!out[@"dsid"])       tryKeys(credProps, dsidKeys,       out, @"dsid");
+            }
+        } @catch (__unused NSException *exc) {}
     } @catch (__unused NSException *exc) {}
 
     return [out copy];
