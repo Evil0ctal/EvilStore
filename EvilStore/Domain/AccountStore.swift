@@ -21,13 +21,19 @@ final class AccountStore: ObservableObject {
     @Published private(set) var state: ProbeState = .idle
 
     private let importer: SystemSessionImporter
+    private let vault: KeychainVault
 
-    init(importer: SystemSessionImporter? = nil) {
+    init(
+        importer: SystemSessionImporter? = nil,
+        vault: KeychainVault = KeychainVaultLive()
+    ) {
         self.importer = importer ?? CompositeImporter(strategies: [
             AccountsdImporter(),
+            StoreKitImporter(),
             FileSystemImporter(),
             KeychainImporter()
         ])
+        self.vault = vault
     }
 
     /// reuses the cached account if probing already produced one. pass
@@ -41,14 +47,21 @@ final class AccountStore: ObservableObject {
         state = .probing
         NSLog("[EvilStore] stealth: bootstrap start (force=%@)", force ? "yes" : "no")
         do {
-            let acc = try await importer.snapshot()
+            var acc = try await importer.snapshot()
+            // every importer can return empty fields; we backfill here so the
+            // resulting Account is usable by AppStoreClient regardless of which
+            // path landed it.
+            if acc.guid.isEmpty {
+                acc.guid = persistedGuid()
+            }
             active = acc
             state = .ready
             NSLog(
-                "[EvilStore] stealth: ready — storefront=%@ guid=%@ token=%@",
-                acc.storefront,
+                "[EvilStore] stealth: ready — storefront=%@ guid=%@ token=%@ cookies=%d",
+                acc.storefront.isEmpty ? "(empty)" : acc.storefront,
                 acc.guid.isEmpty ? "(empty)" : "(\(acc.guid.count) chars)",
-                acc.passwordToken.map { _ in "present" } ?? "nil"
+                acc.passwordToken.map { _ in "present" } ?? "nil",
+                acc.cookies.count
             )
         } catch let err as SystemSessionError {
             state = mapState(err)
@@ -57,6 +70,29 @@ final class AccountStore: ObservableObject {
             state = .failed("\(error)")
             NSLog("[EvilStore] stealth: failed (unknown) — %@", "\(error)")
         }
+    }
+
+    // MARK: - guid persistence
+
+    private static let guidKey = "device.guid"
+
+    /// returns a stable 12-hex GUID. minted on first call, persisted in the
+    /// keychain so reinstalls don't look like new devices to apple risk
+    /// control. matches the ApplePackage.DeviceIdentifier convention.
+    private func persistedGuid() -> String {
+        if let existing = (try? vault.getString(Self.guidKey)) ?? nil,
+           existing.count == 12
+        {
+            return existing
+        }
+        let fresh = generateGuid()
+        try? vault.setString(fresh, for: Self.guidKey)
+        return fresh
+    }
+
+    private func generateGuid() -> String {
+        let chars = Array("0123456789ABCDEF")
+        return String((0 ..< 12).map { _ in chars.randomElement()! })
     }
 
     /// hand-import (manual login flow lands later); for now lets diagnostics
