@@ -82,10 +82,17 @@ final class KeychainImporter: SystemSessionImporter {
         if status == errSecItemNotFound {
             throw SystemSessionError.notLoggedIn
         }
-        guard status == errSecSuccess, let arr = out as? [[CFString: Any]] else {
+        if status == -34018 {
             throw SystemSessionError.entitlementDenied(
-                "SecItemCopyMatching status=\(status) (errSecMissingEntitlement is -34018)"
+                "errSecMissingEntitlement (-34018) — wildcard keychain ents not granted on this ios"
             )
+        }
+        guard status == errSecSuccess else {
+            throw SystemSessionError.entitlementDenied("SecItemCopyMatching status=\(status)")
+        }
+        guard let arr = out as? [[CFString: Any]] else {
+            // status=0 with non-array result = empty match set
+            throw SystemSessionError.notLoggedIn
         }
         return arr
     }

@@ -3,8 +3,9 @@
 
 import Foundation
 
-/// Reads the storeaccountd state straight off /var/mobile/Library/com.apple.itunesstored/.
-/// Requires the no-sandbox + abs-path-read entitlements (M0 baseline already grants them).
+/// reads the storeaccountd state straight off
+/// /var/mobile/Library/com.apple.itunesstored/. requires the no-sandbox +
+/// abs-path-read entitlements (M0 baseline already grants them).
 final class FileSystemImporter: SystemSessionImporter {
     let name = "filesystem"
 
@@ -47,13 +48,27 @@ final class FileSystemImporter: SystemSessionImporter {
 
     // MARK: - accountInfo
 
-    /// keys observed across iOS 14-17 (ApplePackage + ipatool + community dumps):
-    ///   email      : "AppleID" / "appleId" / "DSPersonID-Email"
-    ///   first/last : "FirstName" / "LastName" or via "AccountName"
-    ///   dsid       : "DSPersonID" / "DSID"
-    ///   storefront : "Storefront" / "StoreFront" / "X-Apple-Store-Front"
-    ///   guid       : "GUID" / "DeviceID"
-    /// We try each candidate in turn. M0.5 PoC will narrow this once we have real samples.
+    /// candidate field names per role. apple has reshuffled these across
+    /// ios majors and even between point releases, so we deep-walk the plist
+    /// (not just the top level) and try every key.
+    private static let dsidKeys = [
+        "DSPersonID", "DSID", "dsid", "DsPersonId", "ds-person-id",
+        "AppleID", "appleAccountInfoDSID"
+    ]
+    private static let storefrontKeys = [
+        "Storefront", "StoreFront", "storefront", "X-Apple-Store-Front",
+        "storeFrontIdentifier", "storefrontIdentifier"
+    ]
+    private static let guidKeys = [
+        "GUID", "guid", "DeviceGUID", "deviceGUID", "DeviceID"
+    ]
+    private static let emailKeys = [
+        "AppleID", "appleId", "DSPersonID-Email", "Email", "username",
+        "AppleAccountEmail", "iTunesAccount"
+    ]
+    private static let firstNameKeys = ["FirstName", "firstName"]
+    private static let lastNameKeys = ["LastName", "lastName"]
+
     private func readAccountInfo() throws -> AccountInfoFile {
         let candidates = [
             storeRoot.appendingPathComponent("accountInfo"),
@@ -68,9 +83,7 @@ final class FileSystemImporter: SystemSessionImporter {
                 lastError = error
             }
         }
-        if let lastError {
-            throw lastError
-        }
+        if let lastError { throw lastError }
         throw SystemSessionError.fileFormatChanged(path: storeRoot.appendingPathComponent("accountInfo").path)
     }
 
@@ -78,24 +91,35 @@ final class FileSystemImporter: SystemSessionImporter {
         let data = try Data(contentsOf: url)
         let plist = try PropertyListSerialization.propertyList(from: data, options: [], format: nil)
         guard let dict = plist as? [String: Any] else {
-            throw SystemSessionError.fileFormatChanged(path: url.path)
+            throw SystemSessionError.fileFormatChanged(path: "\(url.path) [root not a dict]")
         }
-        let email = firstString(dict, keys: ["AppleID", "appleId", "DSPersonID-Email", "Email"])
-        let dsid = firstString(dict, keys: ["DSPersonID", "DSID", "dsid"])
-        let storefront = firstString(dict, keys: ["Storefront", "StoreFront", "X-Apple-Store-Front"])
-        let guidRaw = firstString(dict, keys: ["GUID", "DeviceID"])
-        let firstName = firstString(dict, keys: ["FirstName", "firstName"])
-        let lastName = firstString(dict, keys: ["LastName", "lastName"])
 
-        guard let dsid, let storefront, let guidRaw else {
-            throw SystemSessionError.fileFormatChanged(path: url.path)
+        let dsid = recursiveString(dict, keys: Self.dsidKeys)
+        let storefrontRaw = recursiveString(dict, keys: Self.storefrontKeys)
+        let guidRaw = recursiveString(dict, keys: Self.guidKeys)
+        let email = recursiveString(dict, keys: Self.emailKeys)
+        let firstName = recursiveString(dict, keys: Self.firstNameKeys)
+        let lastName = recursiveString(dict, keys: Self.lastNameKeys)
+
+        guard let dsid, let storefrontRaw, let guidRaw else {
+            // dump what the plist actually contains so the user can paste it back
+            // and we can patch the candidate keys. structure summary only — values
+            // are NEVER included.
+            var missing: [String] = []
+            if dsid == nil { missing.append("dsid") }
+            if storefrontRaw == nil { missing.append("storefront") }
+            if guidRaw == nil { missing.append("guid") }
+            let summary = describeStructure(dict)
+            let detail = "\(url.path) [missing=\(missing.joined(separator: ",")) shape=\(summary)]"
+            throw SystemSessionError.fileFormatChanged(path: detail)
         }
+
         return AccountInfoFile(
             email: email ?? "",
             firstName: firstName ?? "",
             lastName: lastName ?? "",
             dsid: dsid,
-            storefront: storefrontHead(storefront),
+            storefront: storefrontHead(storefrontRaw),
             guid: normalizeGuid(guidRaw)
         )
     }
@@ -105,26 +129,22 @@ final class FileSystemImporter: SystemSessionImporter {
         raw.split(separator: "-").first.map(String.init) ?? raw
     }
 
-    /// uppercase + strip ":" so the value matches what storefront API expects in Authenticate.swift
+    /// uppercase + strip ":" so the value matches what storefront API expects
     private func normalizeGuid(_ raw: String) -> String {
         raw.replacingOccurrences(of: ":", with: "").uppercased()
     }
 
     // MARK: - tokens
 
-    /// best-effort: accountTokens may be present, encrypted, or absent depending on iOS keybag.
-    /// throw on missing/malformed; caller should treat the failure as non-fatal.
     private func readPasswordToken() throws -> String {
         let url = storeRoot.appendingPathComponent("accountTokens")
         guard FileManager.default.fileExists(atPath: url.path) else {
             throw SystemSessionError.fileFormatChanged(path: url.path)
         }
         let data = try Data(contentsOf: url)
-        // tokens file is sometimes a plist dict, sometimes raw encrypted blob.
-        // best-effort plist read first.
         if let plist = try? PropertyListSerialization
             .propertyList(from: data, options: [], format: nil) as? [String: Any],
-            let token = firstString(plist, keys: ["passwordToken", "PasswordToken", "Token"])
+            let token = recursiveString(plist, keys: ["passwordToken", "PasswordToken", "Token"])
         {
             return token
         }
@@ -140,16 +160,56 @@ final class FileSystemImporter: SystemSessionImporter {
 
     // MARK: - helpers
 
-    private func firstString(_ dict: [String: Any], keys: [String]) -> String? {
-        for k in keys {
-            if let s = dict[k] as? String, !s.isEmpty {
-                return s
+    /// walk dicts/arrays depth-first looking for any of `keys` (case-insensitive).
+    /// returns the first non-empty string/number-stringified match found.
+    private func recursiveString(_ value: Any, keys: [String]) -> String? {
+        let lowered = Set(keys.map { $0.lowercased() })
+
+        if let dict = value as? [String: Any] {
+            for (k, v) in dict {
+                guard lowered.contains(k.lowercased()) else { continue }
+                if let s = v as? String, !s.isEmpty { return s }
+                if let n = v as? NSNumber { return n.stringValue }
             }
-            if let n = dict[k] as? NSNumber {
-                return n.stringValue
+            for v in dict.values {
+                if let found = recursiveString(v, keys: keys) { return found }
+            }
+        }
+        if let array = value as? [Any] {
+            for child in array {
+                if let found = recursiveString(child, keys: keys) { return found }
             }
         }
         return nil
+    }
+
+    /// summarises a plist structure as "{key1:str, key2:dict{...}, key3:array[N]}"
+    /// — values are not included so the dump is safe to ship in a diagnostic.
+    private func describeStructure(_ value: Any, depth: Int = 0) -> String {
+        if depth > 3 { return "..." }
+        if let dict = value as? [String: Any] {
+            let parts = dict.keys.sorted().map { k -> String in
+                let v = dict[k] as Any
+                return "\(k):\(typeTag(v, depth: depth + 1))"
+            }
+            return "{\(parts.joined(separator: ","))}"
+        }
+        if let array = value as? [Any] {
+            return "[\(array.count)]"
+        }
+        return typeTag(value, depth: depth)
+    }
+
+    private func typeTag(_ value: Any, depth: Int) -> String {
+        switch value {
+        case is String: return "str"
+        case is NSNumber: return "num"
+        case is Date: return "date"
+        case is Data: return "data"
+        case let d as [String: Any]: return describeStructure(d, depth: depth)
+        case let a as [Any]: return "[\(a.count)]"
+        default: return "?"
+        }
     }
 }
 
