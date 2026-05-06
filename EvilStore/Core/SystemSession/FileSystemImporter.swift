@@ -28,9 +28,11 @@ final class FileSystemImporter: SystemSessionImporter {
         guard FileManager.default.fileExists(atPath: storeRoot.path) else {
             throw SystemSessionError.notLoggedIn
         }
-        let info = try readAccountInfo()
         let cookies = readCookies()
         let token = try? readPasswordToken()
+        // accountInfo may not exist on this ios; that's not fatal — we still
+        // contribute cookies and a possible token. CompositeImporter merges.
+        let info = (try? readAccountInfo()) ?? AccountInfoFile.empty
         return Account(
             source: .systemBorrowed,
             email: info.email,
@@ -87,6 +89,9 @@ final class FileSystemImporter: SystemSessionImporter {
         throw SystemSessionError.fileFormatChanged(path: storeRoot.appendingPathComponent("accountInfo").path)
     }
 
+    /// returns whatever fields the plist contains; missing fields are empty.
+    /// only the dsid requirement is upheld — without it this file is useless
+    /// to us and we throw with a shape dump.
     private func parseAccountInfo(at url: URL) throws -> AccountInfoFile {
         let data = try Data(contentsOf: url)
         let plist = try PropertyListSerialization.propertyList(from: data, options: [], format: nil)
@@ -101,17 +106,13 @@ final class FileSystemImporter: SystemSessionImporter {
         let firstName = recursiveString(dict, keys: Self.firstNameKeys)
         let lastName = recursiveString(dict, keys: Self.lastNameKeys)
 
-        guard let dsid, let storefrontRaw, let guidRaw else {
-            // dump what the plist actually contains so the user can paste it back
-            // and we can patch the candidate keys. structure summary only — values
-            // are NEVER included.
-            var missing: [String] = []
-            if dsid == nil { missing.append("dsid") }
-            if storefrontRaw == nil { missing.append("storefront") }
-            if guidRaw == nil { missing.append("guid") }
+        guard let dsid else {
+            // accountInfo with no dsid is unusable — give the shape so we can
+            // patch the candidate keys next iteration.
             let summary = describeStructure(dict)
-            let detail = "\(url.path) [missing=\(missing.joined(separator: ",")) shape=\(summary)]"
-            throw SystemSessionError.fileFormatChanged(path: detail)
+            throw SystemSessionError.fileFormatChanged(
+                path: "\(url.path) [missing=dsid shape=\(summary)]"
+            )
         }
 
         return AccountInfoFile(
@@ -119,8 +120,8 @@ final class FileSystemImporter: SystemSessionImporter {
             firstName: firstName ?? "",
             lastName: lastName ?? "",
             dsid: dsid,
-            storefront: storefrontHead(storefrontRaw),
-            guid: normalizeGuid(guidRaw)
+            storefront: storefrontRaw.map(storefrontHead) ?? "",
+            guid: guidRaw.map(normalizeGuid) ?? ""
         )
     }
 
@@ -220,4 +221,8 @@ private struct AccountInfoFile {
     var dsid: String
     var storefront: String
     var guid: String
+
+    static let empty = AccountInfoFile(
+        email: "", firstName: "", lastName: "", dsid: "", storefront: "", guid: ""
+    )
 }

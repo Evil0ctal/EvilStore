@@ -51,14 +51,13 @@ final class AccountsdImporter: SystemSessionImporter {
     // MARK: - mapping
 
     private func buildAccount(from dict: [String: String]) throws -> Account {
+        // dsid is the only field accountsd reliably provides. storefront often
+        // lives in StoreKit (path D); guid is per-device, so we mint our own
+        // when no importer has it. cookies come from filesystem.
         guard let dsid = dict["dsid"] else {
             throw SystemSessionError.fileFormatChanged(path: "accountsd:dsid")
         }
-        let storefrontRaw = dict["storefront"] ?? ""
-        let storefront = storefrontHead(storefrontRaw)
-        guard !storefront.isEmpty else {
-            throw SystemSessionError.fileFormatChanged(path: "accountsd:storefront")
-        }
+        let storefront = storefrontHead(dict["storefront"] ?? "")
         return Account(
             source: .systemBorrowed,
             email: dict["email"] ?? "",
@@ -68,8 +67,6 @@ final class AccountsdImporter: SystemSessionImporter {
             passwordToken: dict["oauthToken"],
             storefront: storefront,
             pod: nil,
-            // accountsd does not expose the device GUID; FileSystemImporter or a future call
-            // path D will fill it. CompositeImporter merges results in M1.
             guid: "",
             cookies: [],
             encryptedPassword: nil

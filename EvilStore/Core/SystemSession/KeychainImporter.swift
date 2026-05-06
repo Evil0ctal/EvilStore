@@ -43,15 +43,13 @@ final class KeychainImporter: SystemSessionImporter {
         let guidRaw = stringValue(in: items, accountIs: ["GUID", "DeviceGUID"])
         let email = stringValue(in: items, accountIs: ["AppleID", "appleId", "email"])
 
-        guard let dsid else {
-            throw SystemSessionError.fileFormatChanged(path: "keychain:\(accessGroup):DSID")
-        }
+        // partial result is fine; CompositeImporter merges across paths
         return Account(
             source: .systemBorrowed,
             email: email ?? "",
             firstName: "",
             lastName: "",
-            directoryServicesIdentifier: dsid,
+            directoryServicesIdentifier: dsid ?? "",
             passwordToken: token,
             storefront: storefrontHead(storefront ?? ""),
             pod: nil,
