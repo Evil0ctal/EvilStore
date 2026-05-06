@@ -37,6 +37,7 @@ targets:
       base:
         INFOPLIST_FILE: EvilStore/Resources/Info.plist
         CODE_SIGN_ENTITLEMENTS: EvilStore/Resources/entitlements.plist
+        SWIFT_OBJC_BRIDGING_HEADER: EvilStore/EvilStore-Bridging-Header.h
 
   EvilStoreTests:
     type: bundle.unit-test
@@ -45,10 +46,6 @@ targets:
       - path: EvilStoreTests
     dependencies:
       - target: EvilStore
-    settings:
-      base:
-        BUNDLE_LOADER: $(TEST_HOST)
-        TEST_HOST: $(BUILT_PRODUCTS_DIR)/EvilStore.app/EvilStore
 
 schemes:
   EvilStore:
