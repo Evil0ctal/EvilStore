@@ -10,6 +10,11 @@ protocol AppStoreClient {
     func search(term: String, country: String, limit: Int) async throws -> [App]
     func lookup(bundleID: String, country: String) async throws -> App
     func listVersions(account: Account, app: App) async throws -> [String]
+    func versionMetadata(
+        externalIdentifier: String,
+        account: Account,
+        app: App
+    ) async throws -> VersionMetadata.Resolved
 }
 
 /// production implementation. holds one HTTPClient (and therefore one
@@ -31,5 +36,18 @@ struct AppStoreClientLive: AppStoreClient {
 
     func listVersions(account: Account, app: App) async throws -> [String] {
         try await ListVersions.run(account: account, app: app, client: http)
+    }
+
+    func versionMetadata(
+        externalIdentifier: String,
+        account: Account,
+        app: App
+    ) async throws -> VersionMetadata.Resolved {
+        try await VersionMetadata.run(
+            externalIdentifier: externalIdentifier,
+            account: account,
+            app: app,
+            client: http
+        )
     }
 }
