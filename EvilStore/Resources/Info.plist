@@ -42,6 +42,10 @@
     </array>
     <key>UILaunchScreen</key>
     <dict/>
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+        <string>apple-magnifier</string>
+    </array>
     <key>CFBundleURLTypes</key>
     <array>
         <dict>

@@ -10,7 +10,7 @@ struct RootView: View {
                 .tabItem { Label("Search", systemImage: "magnifyingglass") }
             DownloadsView()
                 .tabItem { Label("Downloads", systemImage: "arrow.down.circle") }
-            placeholder("Library")
+            LibraryView()
                 .tabItem { Label("Library", systemImage: "square.stack") }
             SettingsView()
                 .tabItem { Label("Settings", systemImage: "gear") }

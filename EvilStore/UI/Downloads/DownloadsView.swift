@@ -8,6 +8,9 @@ import SwiftUI
 /// the apple-magnifier:// scheme.
 struct DownloadsView: View {
     @EnvironmentObject private var service: DownloadService
+    @State private var alert: DownloadsAlert?
+
+    private let bridge: TrollStoreBridge = TrollStoreBridgeLive()
 
     var body: some View {
         NavigationView {
@@ -16,6 +19,29 @@ struct DownloadsView: View {
                 .navigationBarTitleDisplayMode(.inline)
         }
         .navigationViewStyle(StackNavigationViewStyle())
+        .alert(item: $alert) { content in
+            Alert(
+                title: Text(content.title),
+                message: Text(content.message),
+                dismissButton: .default(Text("ok"))
+            )
+        }
+    }
+
+    private func install(_ url: URL) {
+        guard bridge.isAvailable() else {
+            alert = DownloadsAlert(
+                title: "TrollStore not detected",
+                message: "the apple-magnifier:// scheme is not handled on this device. install TrollStore 1.3 or newer first."
+            )
+            return
+        }
+        if !bridge.install(ipaAt: url) {
+            alert = DownloadsAlert(
+                title: "couldn't open TrollStore",
+                message: "the URL scheme call failed. AirDrop the .ipa to TrollStore manually as a fallback."
+            )
+        }
     }
 
     @ViewBuilder
@@ -25,9 +51,12 @@ struct DownloadsView: View {
         } else {
             List {
                 ForEach(service.tasks) { task in
-                    DownloadRow(task: task) { service.cancel(taskID: $0) } onRemove: {
-                        service.remove(taskID: $0)
-                    }
+                    DownloadRow(
+                        task: task,
+                        onCancel: { service.cancel(taskID: $0) },
+                        onRemove: { service.remove(taskID: $0) },
+                        onInstall: install
+                    )
                 }
             }
             .listStyle(InsetGroupedListStyle())
@@ -56,6 +85,7 @@ private struct DownloadRow: View {
     let task: DownloadTask
     let onCancel: (UUID) -> Void
     let onRemove: (UUID) -> Void
+    let onInstall: (URL) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -102,7 +132,7 @@ private struct DownloadRow: View {
                     .foregroundColor(.secondary)
             }
         case let .done(localPath):
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 6) {
                 Label("ready to install", systemImage: "checkmark.seal.fill")
                     .foregroundColor(.green)
                     .font(.caption)
@@ -111,6 +141,16 @@ private struct DownloadRow: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
+                Button("install via TrollStore") {
+                    onInstall(localPath)
+                }
+                .buttonStyle(BorderlessButtonStyle())
+                .font(.caption.bold())
+                .foregroundColor(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color.accentColor)
+                .cornerRadius(6)
             }
         case let .failed(message):
             Label(message, systemImage: "exclamationmark.triangle")
@@ -169,4 +209,13 @@ private struct ProgressBar: View {
             .clipShape(RoundedRectangle(cornerRadius: 2))
         }
     }
+}
+
+private struct DownloadsAlert: Identifiable {
+    var id: String {
+        title + message
+    }
+
+    let title: String
+    let message: String
 }
